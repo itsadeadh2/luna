@@ -4,6 +4,8 @@ import boto3
 import click
 from tqdm import tqdm
 from boto3.s3.transfer import S3Transfer, TransferConfig
+from prettytable import PrettyTable
+
 
 CONFIG_SHELVE_PATH = os.path.join(os.path.expanduser('~'), 'luna_config')
 
@@ -24,6 +26,16 @@ def get_md5(file_path):
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
+def get_size(start_path):
+    """Recursively calculates the total size of a directory."""
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(start_path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            if os.path.exists(fp):
+                total_size += os.path.getsize(fp)
+    return total_size
 
 def list_s3_objects(bucket, prefix, s3_client):
     """List all objects in an S3 bucket under a specific prefix."""
@@ -59,14 +71,29 @@ def cli():
 @click.command()
 @click.argument('folder_path', type=click.Path(exists=True, file_okay=False))
 def checkfolder(folder_path):
-    """Calculate and print the size of the contents of FOLDER_PATH."""
-    total_size = 0
-    for dirpath, dirnames, filenames in tqdm(os.walk(folder_path), desc='Scanning folder'):
-        for filename in filenames:
-            file_path = os.path.join(dirpath, filename)
-            if os.path.isfile(file_path):
-                total_size += os.path.getsize(file_path)
-    print(f"Total size of '{folder_path}': {total_size / (1024 ** 3):.2f} GB")
+    """List all top-level files and directories in the given folder along with their sizes, ordered from biggest to smallest."""
+    entries = os.listdir(folder_path)
+    sizes = []
+    with tqdm(total=len(entries), desc='Calculating sizes', unit='items') as bar:
+        for entry in entries:
+            full_path = os.path.join(folder_path, entry)
+            if os.path.isdir(full_path):
+                size = get_size(full_path)
+            else:
+                size = os.path.getsize(full_path)
+            sizes.append((entry, size))
+            bar.update(1)
+
+    # Sort the list by size in descending order
+    sizes.sort(key=lambda x: x[1], reverse=True)
+
+    # Create and populate the table with sorted results
+    table = PrettyTable()
+    table.field_names = ["File/Directory", "Size (MB)"]
+    for entry, size in sizes:
+        table.add_row([entry, f"{size / (1024 ** 2):.2f}"])
+
+    print(table)
 
 @click.command()
 @click.argument('folder_path', type=click.Path(exists=True, file_okay=False))
