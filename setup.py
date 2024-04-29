@@ -20,7 +20,7 @@ setup(
     install_requires=load_requirements('requirements.txt'),
     entry_points={
         'console_scripts': [
-            'luna-cli = luna-cli.main:cli',
+            'luna = luna_cli.main:cli',
         ],
     },
     distclass=BinaryDistribution
