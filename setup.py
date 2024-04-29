@@ -13,14 +13,14 @@ def load_requirements(file_path):
 
 
 setup(
-    name='luna',
+    name='luna-cli',
     version='1.0.0',
     packages=find_packages(),
     author='itsadead',
     install_requires=load_requirements('requirements.txt'),
     entry_points={
         'console_scripts': [
-            'luna = luna.main:cli',
+            'luna-cli = luna-cli.main:cli',
         ],
     },
     distclass=BinaryDistribution

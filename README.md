@@ -13,7 +13,7 @@ Luna is a command-line interface (CLI) tool designed to manage the upload of fol
 To install Luna, you can use pip to install directly from PyPI:
 
 ```bash
-pip install git+https://github.com/itsadeadh2/luna.git
+pip install git+https://github.com/itsadeadh2/luna-cli.git
 ```
 
 Alternatively, if you have the source code, navigate to the directory containing `setup.py` and run:

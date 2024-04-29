@@ -59,7 +59,7 @@ def get_transfer_config():
 
 @click.group()
 def cli():
-    """luna CLI for managing local folders and AWS S3 interactions."""
+    """luna-cli CLI for managing local folders and AWS S3 interactions."""
     pass
 
 
@@ -82,7 +82,7 @@ def upload(folder_path):
     """Upload the folder to the configured AWS S3 bucket while preserving the directory structure and skipping unchanged files."""
     bucket_name = read_config()
     if not bucket_name:
-        click.echo("No configuration found. Please run 'luna configure'.")
+        click.echo("No configuration found. Please run 'luna-cli configure'.")
         return  # Exit if no configuration is found
     session = boto3.Session()
     s3_client = session.client('s3')
