@@ -6,8 +6,8 @@ from tqdm import tqdm
 from boto3.s3.transfer import S3Transfer, TransferConfig
 from prettytable import PrettyTable
 
-
 CONFIG_SHELVE_PATH = os.path.join(os.path.expanduser('~'), 'luna_config')
+
 
 def read_config():
     """Reads the bucket name from the configuration file."""
@@ -18,6 +18,7 @@ def read_config():
         click.echo(f"Error reading configuration: {str(e)}")
         return None
 
+
 def get_md5(file_path):
     """Generates an MD5 checksum for the given file."""
     import hashlib
@@ -26,6 +27,7 @@ def get_md5(file_path):
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
+
 
 def get_size(start_path):
     """Recursively calculates the total size of a directory."""
@@ -37,15 +39,18 @@ def get_size(start_path):
                 total_size += os.path.getsize(fp)
     return total_size
 
-def list_s3_objects(bucket, prefix, s3_client):
-    """List all objects in an S3 bucket under a specific prefix."""
+
+def list_s3_objects(bucket, s3_client):
+    """List all objects in an S3 bucket along with their custom metadata."""
     paginator = s3_client.get_paginator('list_objects_v2')
-    pages = paginator.paginate(Bucket=bucket, Prefix=prefix)
+    pages = paginator.paginate(Bucket=bucket)
     objects = {}
     for page in pages:
         for obj in page.get('Contents', []):
-            objects[obj['Key']] = obj['ETag'].strip('"')
+            response = s3_client.head_object(Bucket=bucket, Key=obj['Key'])
+            objects[obj['Key']] = response.get('Metadata').get('file-md5', None)
     return objects
+
 
 def upload_file(transfer, file_path, bucket_name, s3_key, extra_args, progress_bar):
     """Upload a file to S3 using S3Transfer."""
@@ -53,6 +58,7 @@ def upload_file(transfer, file_path, bucket_name, s3_key, extra_args, progress_b
     progress_bar.set_description(f"Uploading {os.path.basename(file_path)}")
     transfer.upload_file(file_path, bucket_name, s3_key, extra_args=extra_args)
     progress_bar.update(file_size)
+
 
 def get_transfer_config():
     """Returns a custom TransferConfig."""
@@ -63,10 +69,12 @@ def get_transfer_config():
         use_threads=True  # Enable threading
     )
 
+
 @click.group()
 def cli():
     """luna CLI for managing local folders and AWS S3 interactions."""
     pass
+
 
 @click.command()
 @click.argument('folder_path', type=click.Path(exists=True, file_okay=False))
@@ -95,6 +103,7 @@ def checkfolder(folder_path):
 
     print(table)
 
+
 @click.command()
 @click.argument('folder_path', type=click.Path(exists=True, file_okay=False))
 def upload(folder_path):
@@ -106,7 +115,7 @@ def upload(folder_path):
     session = boto3.Session()
     s3_client = session.client('s3')
     transfer = S3Transfer(s3_client, config=get_transfer_config())  # Pass the custom TransferConfig
-    s3_objects = list_s3_objects(bucket_name, "", s3_client)  # Get all S3 objects
+    s3_objects = list_s3_objects(bucket_name, s3_client)  # Get all S3 objects
 
     files = [(dirpath, filename) for dirpath, dirs, filenames in os.walk(folder_path) for filename in filenames]
     total_size = 0
@@ -127,8 +136,12 @@ def upload(folder_path):
                     bar.update(os.path.getsize(full_path))
                     continue  # Skip uploading this file as it is unchanged
 
-                extra_args = {'StorageClass': 'ONEZONE_IA'}
+                extra_args = {
+                    'StorageClass': 'ONEZONE_IA',
+                    'Metadata': {'file-md5': local_md5}
+                }
                 upload_file(transfer, full_path, bucket_name, s3_key, extra_args, bar)
+
 
 @click.command()
 def configure():
@@ -140,6 +153,7 @@ def configure():
         click.echo("AWS S3 bucket configuration saved.")
     except Exception as e:
         click.echo(f"Failed to save configuration: {str(e)}")
+
 
 cli.add_command(checkfolder)
 cli.add_command(upload)
