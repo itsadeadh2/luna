@@ -81,7 +81,6 @@ def upload(folder_path):
     transfer = S3Transfer(s3_client, config=get_transfer_config())  # Pass the custom TransferConfig
     s3_objects = list_s3_objects(bucket_name, "", s3_client)  # Get all S3 objects
 
-    print('Calculating total size of objects...')
     files = [(dirpath, filename) for dirpath, dirs, filenames in os.walk(folder_path) for filename in filenames]
     total_size = 0
     with tqdm(total=len(files), desc='Calculating sizes', unit='files') as bar:
