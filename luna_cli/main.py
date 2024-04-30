@@ -29,11 +29,13 @@ def get_md5(file_path):
     return hash_md5.hexdigest()
 
 
-def get_size(start_path):
+def get_size(start_path, ignore_ext):
     """Recursively calculates the total size of a directory."""
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(start_path):
         for f in filenames:
+            if any(f.lower().endswith(ext) for ext in ignore_ext):
+                continue
             fp = os.path.join(dirpath, f)
             if os.path.exists(fp):
                 total_size += os.path.getsize(fp)
@@ -78,16 +80,20 @@ def cli():
 
 @click.command()
 @click.argument('folder_path', type=click.Path(exists=True, file_okay=False))
-def checkfolder(folder_path):
+@click.option('--ignore-ext', '-i', multiple=True, type=str, help="File extensions to ignore")
+def checkfolder(folder_path, ignore_ext):
     """List all top-level files and directories in the given folder along with their sizes, ordered from biggest to smallest."""
     entries = os.listdir(folder_path)
+    ignore_ext = set('.' + ext.lstrip('.').lower() for ext in ignore_ext)
     sizes = []
     with tqdm(total=len(entries), desc='Calculating sizes', unit='items') as bar:
         for entry in entries:
             full_path = os.path.join(folder_path, entry)
             if os.path.isdir(full_path):
-                size = get_size(full_path)
+                size = get_size(full_path, ignore_ext)
             else:
+                if any(full_path.lower().endswith(ext) for ext in ignore_ext):
+                    continue
                 size = os.path.getsize(full_path)
             sizes.append((entry, size))
             bar.update(1)
@@ -106,7 +112,8 @@ def checkfolder(folder_path):
 
 @click.command()
 @click.argument('folder_path', type=click.Path(exists=True, file_okay=False))
-def upload(folder_path):
+@click.option('--ignore-ext', '-i', multiple=True, type=str, help="File extensions to ignore")
+def upload(folder_path, ignore_ext):
     """Upload the folder to the configured AWS S3 bucket while preserving the directory structure and skipping unchanged files."""
     bucket_name = read_config()
     if not bucket_name:
@@ -119,8 +126,11 @@ def upload(folder_path):
 
     files = [(dirpath, filename) for dirpath, dirs, filenames in os.walk(folder_path) for filename in filenames]
     total_size = 0
+    ignore_ext = set('.' + ext.lstrip('.').lower() for ext in ignore_ext)
     with tqdm(total=len(files), desc='Calculating sizes', unit='files') as bar:
         for dirpath, filename in files:
+            if any(filename.lower().endswith(ext) for ext in ignore_ext):
+                continue
             file_path = os.path.join(dirpath, filename)
             total_size += os.path.getsize(file_path)
             bar.update(1)
@@ -128,6 +138,8 @@ def upload(folder_path):
     with tqdm(total=total_size, unit='B', unit_scale=True, desc='Uploading Folder') as bar:
         for dirpath, dirs, files in os.walk(folder_path):
             for file in files:
+                if any(file.lower().endswith(ext) for ext in ignore_ext):
+                    continue
                 full_path = os.path.join(dirpath, file)
                 relative_path = os.path.relpath(full_path, start=os.path.dirname(folder_path))
                 s3_key = relative_path.replace(os.sep, '/')
