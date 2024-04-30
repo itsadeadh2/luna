@@ -10,7 +10,7 @@ Luna is a command-line interface (CLI) tool designed to manage the upload of fol
 - **Configuration Management**: Configures and saves AWS S3 bucket names using a local database stored in the user's home directory.
 
 ## Installation
-To install Luna, you can use pip to install directly from PyPI:
+To install Luna, you can use pip to install directly from this repo:
 
 ```bash
 pip install git+https://github.com/itsadeadh2/luna-cli.git
