@@ -93,6 +93,7 @@ def checkfolder(folder_path, ignore_ext):
                 size = get_size(full_path, ignore_ext)
             else:
                 if any(full_path.lower().endswith(ext) for ext in ignore_ext):
+                    bar.update(1)
                     continue
                 size = os.path.getsize(full_path)
             sizes.append((entry, size))
@@ -130,6 +131,7 @@ def upload(folder_path, ignore_ext):
     with tqdm(total=len(files), desc='Calculating sizes', unit='files') as bar:
         for dirpath, filename in files:
             if any(filename.lower().endswith(ext) for ext in ignore_ext):
+                bar.update(1)
                 continue
             file_path = os.path.join(dirpath, filename)
             total_size += os.path.getsize(file_path)

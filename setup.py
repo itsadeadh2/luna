@@ -14,7 +14,7 @@ def load_requirements(file_path):
 
 setup(
     name='luna-cli',
-    version='1.0.4',
+    version='1.0.5',
     packages=find_packages(),
     author='itsadead',
     install_requires=load_requirements('requirements.txt'),
